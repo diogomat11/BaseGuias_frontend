@@ -131,9 +131,8 @@ export default function Importacoes() {
       <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
         <h3>Nova Solicitação</h3>
         <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', alignItems: 'flex-start', marginTop: '1rem' }}>
-          {/* Same select logic as before, simplified for this snippet */}
           <div style={{ minWidth: '200px' }}>
-            <label>Tipo</label>
+            <label>Tipo de Importação</label>
             <select
               style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', background: '#2a2a2a', color: 'white', border: '1px solid #444' }}
               value={importType}
@@ -147,25 +146,86 @@ export default function Importacoes() {
 
           {importType !== 'all' && (
             <div style={{ flex: 1, minWidth: '300px' }}>
-              <label>Pacientes</label>
-              {/* Reusing the multiple select logic from before would take space, keeping it simple: Select multiple IDs via standard select for now or reuse the component logic */}
-              <select
-                style={{ width: '100%', padding: '0.6rem', background: '#2a2a2a', color: 'white', border: '1px solid #444', height: '100px' }}
-                multiple
-                value={selectedCarteirinhas.map(String)}
-                onChange={e => {
-                  const options = [...e.target.selectedOptions];
-                  const values = options.map(o => parseInt(o.value));
-                  setSelectedCarteirinhas(values);
-                }}
-              >
-                {carteirinhas.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.paciente ? `${c.paciente} (${c.carteirinha})` : c.carteirinha}
-                  </option>
-                ))}
-              </select>
-              <small style={{ color: '#888' }}>Segure Ctrl para selecionar múltiplos</small>
+              <label>Selecione os Pacientes</label>
+
+              {/* Restored Custom Search + Add Component */}
+              {importType === 'multiple' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      list="patients-list"
+                      placeholder="Pesquisar paciente... (Enter p/ incluir)"
+                      style={{ flex: 1, padding: '0.6rem', borderRadius: '4px', border: '1px solid #444', background: '#333', color: 'white' }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const val = e.target.value;
+                          const item = carteirinhas.find(c => (c.paciente ? `${c.paciente} (${c.carteirinha})` : c.carteirinha) === val);
+                          if (item) {
+                            if (!selectedCarteirinhas.includes(item.id)) {
+                              setSelectedCarteirinhas([...selectedCarteirinhas, item.id]);
+                            }
+                            e.target.value = '';
+                          }
+                        }
+                      }}
+                      id="patient-search-input"
+                    />
+                    <datalist id="patients-list">
+                      {carteirinhas.map(c => (
+                        <option key={c.id} value={c.paciente ? `${c.paciente} (${c.carteirinha})` : c.carteirinha} />
+                      ))}
+                    </datalist>
+                    <button className="btn" onClick={() => {
+                      const input = document.getElementById('patient-search-input');
+                      const val = input.value;
+                      const item = carteirinhas.find(c => (c.paciente ? `${c.paciente} (${c.carteirinha})` : c.carteirinha) === val);
+                      if (item) {
+                        if (!selectedCarteirinhas.includes(item.id)) {
+                          setSelectedCarteirinhas([...selectedCarteirinhas, item.id]);
+                        }
+                        input.value = '';
+                      } else {
+                        alert("Selecione um paciente válido da lista.");
+                      }
+                    }} style={{ background: '#3b82f6' }}>
+                      +
+                    </button>
+                  </div>
+
+                  {/* Selected List */}
+                  <div style={{ maxHeight: '150px', overflowY: 'auto', background: '#222', borderRadius: '4px', padding: '0.5rem' }}>
+                    {selectedCarteirinhas.length === 0 && <span style={{ color: '#666', fontSize: '0.9rem' }}>Nenhum paciente selecionado</span>}
+                    {selectedCarteirinhas.map(id => {
+                      const c = carteirinhas.find(x => x.id === id);
+                      return (
+                        <div key={id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#333', padding: '0.3rem 0.6rem', marginBottom: '0.3rem', borderRadius: '4px' }}>
+                          <span style={{ fontSize: '0.9rem' }}>{c ? (c.paciente || c.carteirinha) : id}</span>
+                          <button
+                            onClick={() => setSelectedCarteirinhas(selectedCarteirinhas.filter(x => x !== id))}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 'bold' }}
+                          >
+                            x
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                // Single Selection
+                <select
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', background: '#2a2a2a', color: 'white', border: '1px solid #444' }}
+                  value={selectedCarteirinhas[0] || ''}
+                  onChange={e => setSelectedCarteirinhas([parseInt(e.target.value)])}
+                >
+                  <option value="">Selecione o Paciente</option>
+                  {carteirinhas.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.paciente ? `${c.paciente} (${c.carteirinha})` : c.carteirinha}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
 
@@ -230,7 +290,6 @@ export default function Importacoes() {
                   <td>{calculateDuration(job.created_at, job.updated_at)}</td>
                   <td>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      {/* Delete/Retry allowed only if error and attempts > 3 */}
                       {(job.status === 'error' && job.attempts > 3) ? (
                         <>
                           <button className="btn" style={{ padding: '0.3rem', background: '#f59e0b' }} onClick={() => handleRetryJob(job.id)} title="Reenviar">
