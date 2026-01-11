@@ -1,10 +1,12 @@
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, Activity, LogOut } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import Importacoes from './pages/Importacoes';
+import { LayoutDashboard, Users, FileText, Activity, LogOut, Table } from 'lucide-react';
+import React, { useEffect } from 'react';
+import Importacoes from './pages/Importacoes'; // Now Jobs
 import Carteirinhas from './pages/Carteirinhas';
 import Logs from './pages/Logs';
 import Login from './pages/Login';
+import BaseGuias from './pages/BaseGuias';
+import Dashboard from './pages/Dashboard';
 
 const INACTIVITY_TIMEOUT = 20 * 60 * 1000; // 20 minutes
 
@@ -28,7 +30,14 @@ function Sidebar() {
       </div>
       <nav style={{ flex: 1 }}>
         <Link to="/" className={`nav-item ${isActive('/')}`}>
-          <LayoutDashboard size={20} /> Importações
+          <LayoutDashboard size={20} /> Dashboard
+        </Link>
+        <Link to="/guias" className={`nav-item ${isActive('/guias')}`}>
+          <Table size={20} /> Base Guias
+        </Link>
+        <Link to="/jobs" className={`nav-item ${isActive('/jobs')}`}>
+          {/* Using Import icon for Jobs */}
+          <FileText size={20} /> Importações
         </Link>
         <Link to="/carteirinhas" className={`nav-item ${isActive('/carteirinhas')}`}>
           <Users size={20} /> Carteirinhas
@@ -50,74 +59,72 @@ function Sidebar() {
   );
 }
 
-function PrivateLayout({ children }) {
-  const navigate = useNavigate();
+function PrivateRoute({ children }) {
   const token = localStorage.getItem('token');
-
-  // Auto-logout Logic
-  useEffect(() => {
-    let timeout;
-
-    const resetTimer = () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        localStorage.removeItem('token');
-        navigate('/login');
-      }, INACTIVITY_TIMEOUT);
-    };
-
-    window.addEventListener('mousemove', resetTimer);
-    window.addEventListener('keypress', resetTimer);
-    window.addEventListener('click', resetTimer);
-
-    resetTimer(); // Start timer
-
-    return () => {
-      clearTimeout(timeout);
-      window.removeEventListener('mousemove', resetTimer);
-      window.removeEventListener('keypress', resetTimer);
-      window.removeEventListener('click', resetTimer);
-    };
-  }, [navigate]);
-
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return (
-    <div className="app-container">
-      <Sidebar />
-      <main className="main-content">
-        {children}
-      </main>
-    </div>
-  );
+  return token ? children : <Navigate to="/login" />;
 }
 
-function App() {
+export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
 
         <Route path="/" element={
-          <PrivateLayout>
-            <Importacoes />
-          </PrivateLayout>
+          <PrivateRoute>
+            <div className="app-container">
+              <Sidebar />
+              <main className="main-content">
+                <Dashboard />
+              </main>
+            </div>
+          </PrivateRoute>
         } />
+
+        <Route path="/guias" element={
+          <PrivateRoute>
+            <div className="app-container">
+              <Sidebar />
+              <main className="main-content">
+                <BaseGuias />
+              </main>
+            </div>
+          </PrivateRoute>
+        } />
+
+        <Route path="/jobs" element={
+          <PrivateRoute>
+            <div className="app-container">
+              <Sidebar />
+              <main className="main-content">
+                <Importacoes />
+              </main>
+            </div>
+          </PrivateRoute>
+        } />
+
         <Route path="/carteirinhas" element={
-          <PrivateLayout>
-            <Carteirinhas />
-          </PrivateLayout>
+          <PrivateRoute>
+            <div className="app-container">
+              <Sidebar />
+              <main className="main-content">
+                <Carteirinhas />
+              </main>
+            </div>
+          </PrivateRoute>
         } />
+
         <Route path="/logs" element={
-          <PrivateLayout>
-            <Logs />
-          </PrivateLayout>
+          <PrivateRoute>
+            <div className="app-container">
+              <Sidebar />
+              <main className="main-content">
+                <Logs />
+              </main>
+            </div>
+          </PrivateRoute>
         } />
       </Routes>
     </BrowserRouter>
   );
 }
-
-export default App;
